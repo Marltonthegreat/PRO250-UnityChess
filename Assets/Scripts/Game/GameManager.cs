@@ -86,7 +86,8 @@ public class GameManager : MonoBehaviourSingleton<GameManager>
             [GameSerializationType.PGN] = new PGNSerializer()
         };
 
-        StartNewGame();
+        //StartNewGame();
+        StartNewGame(false, true, GeneratePairs(GenerateAllPositions()));
 
 #if DEBUG_VIEW
 		unityChessDebug.gameObject.SetActive(true);
@@ -99,12 +100,129 @@ public class GameManager : MonoBehaviourSingleton<GameManager>
         uciEngine?.ShutDown();
     }
 
-#if AI_TEST
-	public async void StartNewGame(bool isWhiteAI = true, bool isBlackAI = true) {
-#else
-    public async void StartNewGame(bool isWhiteAI = false, bool isBlackAI = false, params (Square, Piece)[] squarePiecePairs)
+    private char[] GenerateAllPositions()
     {
-#endif
+        char[] positions = new char[8];
+
+        //generate two bishops
+        int bishopOnePos = UnityEngine.Random.Range(0, 4);
+        int bishopTwoPos = UnityEngine.Random.Range(0, 4);
+
+        positions[bishopOnePos * 2] = 'B';
+        positions[1 + bishopTwoPos * 2] = 'B';
+
+        //generate queen
+        GeneratePosition(ref positions, 6, 'Q');
+
+        //generate knightOne
+        GeneratePosition(ref positions, 5, 'N');
+
+        //generate knightTwo
+        GeneratePosition(ref positions, 4, 'N');
+
+        //generate remaining pieces
+        GenerateKingRooksPositions(ref positions);
+
+        return positions;
+    }
+
+    private void GeneratePosition(ref char[] positions, int maxExclusive, char symbol)
+    {
+        int piecePos = UnityEngine.Random.Range(0, maxExclusive);
+
+        int[] emptyIndicies = CheckEmptyIndicies(positions);
+
+        positions[emptyIndicies[piecePos]] = symbol;
+    }
+
+    private void GenerateKingRooksPositions(ref char[] positions)
+    {
+        int[] emptyIndicies = CheckEmptyIndicies(positions);
+
+        positions[emptyIndicies[0]] = 'R';
+        positions[emptyIndicies[1]] = 'K';
+        positions[emptyIndicies[2]] = 'R';
+
+    }
+
+    private int[] CheckEmptyIndicies(char[] array)
+    {
+        List<int> emptyIndicies = new List<int>();
+
+        for (int i = 0; i < array.Length; i++)
+        {
+            if (array[i] == '\0') emptyIndicies.Add(i);
+        }
+
+        return emptyIndicies.ToArray();
+    }
+
+    private (Square, Piece)[] GeneratePairs(char[] positions)
+    {
+        (Square, Piece)[] startingPositionPieces = {
+            (new Square("a1"), DeterminePiece(positions[0], Side.White)),
+            (new Square("b1"), DeterminePiece(positions[1], Side.White)),
+            (new Square("c1"), DeterminePiece(positions[2], Side.White)),
+            (new Square("d1"), DeterminePiece(positions[3], Side.White)),
+            (new Square("e1"), DeterminePiece(positions[4], Side.White)),
+            (new Square("f1"), DeterminePiece(positions[5], Side.White)),
+            (new Square("g1"), DeterminePiece(positions[6], Side.White)),
+            (new Square("h1"), DeterminePiece(positions[7], Side.White)),
+
+            (new Square("a2"), new Pawn(Side.White)),
+            (new Square("b2"), new Pawn(Side.White)),
+            (new Square("c2"), new Pawn(Side.White)),
+            (new Square("d2"), new Pawn(Side.White)),
+            (new Square("e2"), new Pawn(Side.White)),
+            (new Square("f2"), new Pawn(Side.White)),
+            (new Square("g2"), new Pawn(Side.White)),
+            (new Square("h2"), new Pawn(Side.White)),
+
+            (new Square("a7"), new Pawn(Side.Black)),
+            (new Square("b7"), new Pawn(Side.Black)),
+            (new Square("c7"), new Pawn(Side.Black)),
+            (new Square("d7"), new Pawn(Side.Black)),
+            (new Square("e7"), new Pawn(Side.Black)),
+            (new Square("f7"), new Pawn(Side.Black)),
+            (new Square("g7"), new Pawn(Side.Black)),
+            (new Square("h7"), new Pawn(Side.Black)),
+
+            (new Square("a8"), DeterminePiece(positions[0], Side.Black)),
+            (new Square("b8"), DeterminePiece(positions[1], Side.Black)),
+            (new Square("c8"), DeterminePiece(positions[2], Side.Black)),
+            (new Square("d8"), DeterminePiece(positions[3], Side.Black)),
+            (new Square("e8"), DeterminePiece(positions[4], Side.Black)),
+            (new Square("f8"), DeterminePiece(positions[5], Side.Black)),
+            (new Square("g8"), DeterminePiece(positions[6], Side.Black)),
+            (new Square("h8"), DeterminePiece(positions[7], Side.Black))
+        };
+
+        return startingPositionPieces;
+    }
+
+    private Piece DeterminePiece(char piece, Side side)
+    {
+        switch (piece)
+        {
+            case 'K':
+                return new King(side);
+            case 'Q':
+                return new Queen(side);
+            case 'R':
+                return new Rook(side);
+            case 'N':
+                return new Knight(side);
+            case 'B':
+                return new Bishop(side);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+
+    }
+
+    public async void StartNewGame(bool isWhiteAI = false, bool isBlackAI = true, params (Square, Piece)[] squarePiecePairs)
+    {
         if (squarePiecePairs.Length == 0)
         {
             game = new Game();
